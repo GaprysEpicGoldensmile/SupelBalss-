@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SupelBalss!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #030308;
+      touch-action: none;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    #hudContainer {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+      user-select: none;
+      flex-wrap: wrap;
+    }
+
+    .hud-box {
+      background: rgba(15, 15, 25, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 10px 16px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    #coinHud { border-color: rgba(255, 215, 0, 0.4); color: #ffd700; display: none; }
+    #bpsHud { border-color: rgba(0, 229, 255, 0.4); color: #00e5ff; display: none; }
+
+    #trackHud {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      background: rgba(15, 15, 25, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 12px;
+      padding: 8px 14px;
+      color: #00e5ff;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 10;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+    }
+
+    #audioBtn, #menuBtn {
+      position: absolute;
+      top: 15px;
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 30;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      user-select: none;
+    }
+    #audioBtn { right: 68px; font-size: 20px; }
+    #menuBtn { right: 15px; font-size: 22px; }
+
+    #menuPanel {
+      position: absolute;
+      top: 0;
+      right: -340px;
+      width: 320px;
+      height: 100%;
+      background: rgba(15, 15, 25, 0.95);
+      backdrop-filter: blur(14px);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 24px 20px;
+      color: #fff;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -5px 0 25px rgba(0,0,0,0.7);
+      overflow-y: auto;
+    }
+
+    #menuPanel.open { right: 0; }
+
+    .menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .close-btn { background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bb86fc;
+      margin-top: 14px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .mode-switch {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: none;
+      color: #aaa;
+      font-size: 12px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .mode-btn.active { background: #bb86fc; color: #000; }
+
+    .upgrade-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .upgrade-info h4 { font-size: 13px; color: #fff; margin-bottom: 2px; }
+    .upgrade-info p { font-size: 11px; color: #aaa; }
+
+    .buy-btn {
+      background: linear-gradient(45deg, #ffd700, #ff9100);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #000;
+      font-weight: bold;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .buy-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+    .speed-container {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+    .speed-container.disabled { opacity: 0.4; pointer-events: none; }
+    input[type=range] { width: 100%; accent-color: #bb86fc; }
+
+    .theme-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .theme-btn {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #ddd;
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .theme-btn.active {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #bb86fc;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .theme-btn.locked { opacity: 0.6; }
+    .time-lock-text { font-size: 10px; color: #ff80ab; font-weight: bold; }
+    .color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+
+    .credits-box {
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.6;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<audio id="bgMusic"></audio>
+
+<div id="hudContainer">
+  <div class="hud-box">
+    <span>⏱️</span>
+    <span id="timeHud">00:00</span>
+  </div>
+  <div class="hud-box" id="coinHud">
+    <span>🪙</span>
+    <span id="coinCount">0</span>
+  </div>
+  <div class="hud-box" id="bpsHud">
+    <span>⚡</span>
+    <span id="bpsCount">0/s</span>
+  </div>
+</div>
+
+<div id="trackHud">🎵 Kliknij ekran, aby włączyć muzykę</div>
+
+<div id="audioBtn" title="Dźwięk">🔊</div>
+<div id="menuBtn">☰</div>
+
+<div id="menuPanel">
+  <div class="menu-header">
+    <h3>SupelBalss!</h3>
+    <button class="close-btn" id="closeBtn">✕</button>
+  </div>
+
+  <div class="section-title" id="t-langSection">Język / Language</div>
+  <div class="mode-switch">
+    <button class="mode-btn active" id="langPlBtn" onclick="setLanguage('pl')">🇵🇱 Polski</button>
+    <button class="mode-btn" id="langEnBtn" onclick="setLanguage('en')">🇬🇧 English</button>
+  </div>
+
+  <div class="section-title" id="t-audioSection">Dźwięk & Muzyka</div>
+  <div class="speed-container">
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+      <span id="t-musicVol">Głośność Muzyki:</span>
+      <span id="musicVolVal" style="color: #bb86fc; font-weight: bold;">50%</span>
+    </div>
+    <input type="range" id="musicVolSlider" min="0" max="1" step="0.05" value="0.5">
+    
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px; margin-bottom:8px;">
+      <span id="t-sfxVol">Efekty (SFX):</span>
+      <span id="sfxVolVal" style="color: #bb86fc; font-weight: bold;">70%</span>
+    </div>
+    <input type="range" id="sfxVolSlider" min="0" max="1" step="0.05" value="0.7">
+  </div>
+
+  <div class="section-title" id="t-modeSection">Tryb Gry</div>
+  <div class="mode-switch">
+    <button class="mode-btn active" id="modeFreeBtn" onclick="switchGameMode('free')">Swobodny</button>
+    <button class="mode-btn" id="modeIdleBtn" onclick="switchGameMode('idle')">Tryb IDLE (Gra)</button>
+  </div>
+
+  <div id="idleSection" style="display: none;">
+    <div class="section-title" id="t-shopSection" style="color: #ffd700;">Sklep & Ulepszenia</div>
+    
+    <div class="upgrade-card">
+      <div class="upgrade-info">
+        <h4 id="t-moreCoinsTitle">Więcej Monet / odbicie</h4>
+        <p><span id="t-currently">Obecnie</span>: +<span id="incomeVal">1</span> coin/<span id="t-bounceText">odbicie</span></p>
+      </div>
+      <button class="buy-btn" id="buyIncomeBtn" onclick="buyIncomeUpgrade()"><span id="t-btnUpgrade">Ulepsz</span><br><span id="incomeCost">10</span> 🪙</button>
+    </div>
+
+    <div class="upgrade-card">
+      <div class="upgrade-info">
+        <h4 id="t-extraBallTitle">Dodatkowa Kulka</h4>
+        <p><span id="t-ballsCountText">Obecnie kulek</span>: <span id="ballCountVal">1</span>/50</p>
+      </div>
+      <button class="buy-btn" id="buyBallBtn" onclick="buyBallUpgrade()"><span id="t-btnBuy">Kup</span><br><span id="ballCost">25</span> 🪙</button>
+    </div>
+  </div>
+
+  <div class="section-title" id="t-freeBallsTitle">Liczba Kulek (Tryb Swobodny)</div>
+  <div class="speed-container" id="freeBallContainer">
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+      <span id="t-ballsAmountText">Ilość kulek (max 50):</span>
+      <span id="freeBallValue" style="color: #bb86fc; font-weight: bold;">25</span>
+    </div>
+    <input type="range" id="freeBallSlider" min="1" max="50" step="1" value="25">
+  </div>
+
+  <div class="section-title" id="t-speedTitle">Prędkość Ruchu</div>
+  <div class="speed-container" id="speedContainer">
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+      <span id="t-speedMultiplierText">Mnożnik prędkości:</span>
+      <span id="speedValue" style="color: #bb86fc; font-weight: bold;">1.0x</span>
+    </div>
+    <input type="range" id="speedSlider" min="0.2" max="3.0" step="0.1" value="1.0">
+  </div>
+
+  <div class="section-title" id="t-ballThemesTitle">Palety Kulek</div>
+  <div class="theme-list" id="themeList"></div>
+
+  <div class="section-title" id="t-bgThemesTitle">Tapety / Tła</div>
+  <div class="theme-list" id="bgThemeList"></div>
+
+  <div class="section-title" id="t-creditsTitle">Twórcy & Credits</div>
+  <div class="credits-box" id="creditsContent"></div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+  // BEZPIECZNE ODCZYTYWANIE Z LOCALSTORAGE
+  function parseVal(key, fallback) {
+    const val = localStorage.getItem(key);
+    if (val === null || val === undefined) return fallback;
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? fallback : parsed;
+  }
+
+  let currentLang = localStorage.getItem('supelbalss_lang') || 'pl';
+  let currentThemeIndex = parseVal('supelbalss_ball_theme', 0);
+  let currentBgIndex = parseVal('supelbalss_bg_theme', 0);
+  let musicVolume = parseVal('supelbalss_music_vol', 0.5);
+  let sfxVolume = parseVal('supelbalss_sfx_vol', 0.7);
+  let isMuted = localStorage.getItem('supelbalss_muted') === 'true';
+
+  const translations = {
+    pl: {
+      langSection: "Język / Language",
+      audioSection: "Dźwięk & Muzyka",
+      musicVol: "Głośność Muzyki:",
+      sfxVol: "Efekty (SFX):",
+      modeSection: "Tryb Gry",
+      modeFree: "Swobodny",
+      modeIdle: "Tryb IDLE (Gra)",
+      shopSection: "Sklep & Ulepszenia",
+      moreCoinsTitle: "Więcej Monet / odbicie",
+      currently: "Obecnie",
+      bounceText: "odbicie",
+      btnUpgrade: "Ulepsz",
+      extraBallTitle: "Dodatkowa Kulka",
+      ballsCountText: "Obecnie kulek",
+      btnBuy: "Kup",
+      freeBallsTitle: "Liczba Kulek (Tryb Swobodny)",
+      ballsAmountText: "Ilość kulek (max 50):",
+      speedTitle: "Prędkość Ruchu",
+      speedMultiplierText: "Mnożnik prędkości:",
+      ballThemesTitle: "Palety Kulek",
+      bgThemesTitle: "Tapety / Tła",
+      creditsTitle: "Twórcy & Credits",
+      creditsBody: "🎼 <b>Music:</b> Tobu & Itro (NCS)<br>💡 <b>Concept:</b> Gaprys'<br>💻 <b>Developer:</b> Gemini AI",
+      clickToPlay: "🎵 Kliknij ekran, aby włączyć muzykę",
+      playMore: "🔒 zagraj jeszcze",
+      mins: "min",
+      themeNeon: "Neon Róż / Niebieski",
+      themeChameleon: "Kameleon 🌈",
+      themeRedBlue: "Czerwony / Niebieski 🔴🔵",
+      themeClock: "Zegar / Czasoprzestrzeń ⏰",
+      themeGold: "Luksusowe Złoto",
+      themeCoin: "Coinowa Kulka (🪙)",
+      themeMatrix: "Matrix (0/1) 🟢",
+      themeBlackHole: "Czarna Dziura 🕳️",
+      bgSpace: "Ciemny Kosmos",
+      bgSpaceTime: "Zegary Czasoprzestrzeni 🌌",
+      bgMoney: "Zielony Pieniążek (🪙)",
+      bgMatrix: "Matrix Code 💻"
+    },
+    en: {
+      langSection: "Language / Język",
+      audioSection: "Audio & Music",
+      musicVol: "Music Volume:",
+      sfxVol: "Sound Effects (SFX):",
+      modeSection: "Game Mode",
+      modeFree: "Free Play",
+      modeIdle: "IDLE Mode (Game)",
+      shopSection: "Shop & Upgrades",
+      moreCoinsTitle: "More Coins / bounce",
+      currently: "Current",
+      bounceText: "bounce",
+      btnUpgrade: "Upgrade",
+      extraBallTitle: "Extra Ball",
+      ballsCountText: "Current balls",
+      btnBuy: "Buy",
+      freeBallsTitle: "Ball Count (Free Play)",
+      ballsAmountText: "Ball amount (max 50):",
+      speedTitle: "Movement Speed",
+      speedMultiplierText: "Speed multiplier:",
+      ballThemesTitle: "Ball Themes",
+      bgThemesTitle: "Background Themes",
+      creditsTitle: "Credits & Creators",
+      creditsBody: "🎼 <b>Music:</b> Tobu & Itro (NCS)<br>💡 <b>Concept:</b> Gaprys'<br>💻 <b>Developer:</b> Gemini AI",
+      clickToPlay: "🎵 Click screen to play music",
+      playMore: "🔒 play for another",
+      mins: "min",
+      themeNeon: "Neon Pink / Blue",
+      themeChameleon: "Chameleon 🌈",
+      themeRedBlue: "Red / Blue 🔴🔵",
+      themeClock: "Clock / Spacetime ⏰",
+      themeGold: "Luxury Gold",
+      themeCoin: "Coin Ball (🪙)",
+      themeMatrix: "Matrix (0/1) 🟢",
+      themeBlackHole: "Black Hole 🕳️",
+      bgSpace: "Dark Space",
+      bgSpaceTime: "Spacetime Clocks 🌌",
+      bgMoney: "Money Pattern (🪙)",
+      bgMatrix: "Matrix Code 💻"
+    }
+  };
+
+  function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('supelbalss_lang', lang);
+    document.getElementById('langPlBtn').classList.toggle('active', lang === 'pl');
+    document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+    
+    const t = translations[lang] || translations.pl;
+    document.getElementById('t-langSection').innerText = t.langSection;
+    document.getElementById('t-audioSection').innerText = t.audioSection;
+    document.getElementById('t-musicVol').innerText = t.musicVol;
+    document.getElementById('t-sfxVol').innerText = t.sfxVol;
+    document.getElementById('t-modeSection').innerText = t.modeSection;
+    document.getElementById('modeFreeBtn').innerText = t.modeFree;
+    document.getElementById('modeIdleBtn').innerText = t.modeIdle;
+    document.getElementById('t-shopSection').innerText = t.shopSection;
+    document.getElementById('t-moreCoinsTitle').innerText = t.moreCoinsTitle;
+    document.getElementById('t-currently').innerText = t.currently;
+    document.getElementById('t-bounceText').innerText = t.bounceText;
+    document.getElementById('t-btnUpgrade').innerText = t.btnUpgrade;
+    document.getElementById('t-extraBallTitle').innerText = t.extraBallTitle;
+    document.getElementById('t-ballsCountText').innerText = t.ballsCountText;
+    document.getElementById('t-btnBuy').innerText = t.btnBuy;
+    document.getElementById('t-freeBallsTitle').innerText = t.freeBallsTitle;
+    document.getElementById('t-ballsAmountText').innerText = t.ballsAmountText;
+    document.getElementById('t-speedTitle').innerText = t.speedTitle;
+    document.getElementById('t-speedMultiplierText').innerText = t.speedMultiplierText;
+    document.getElementById('t-ballThemesTitle').innerText = t.ballThemesTitle;
+    document.getElementById('t-bgThemesTitle').innerText = t.bgThemesTitle;
+    document.getElementById('t-creditsTitle').innerText = t.creditsTitle;
+    document.getElementById('creditsContent').innerHTML = t.creditsBody;
+
+    if (!musicStarted) {
+      document.getElementById('trackHud').innerText = t.clickToPlay;
+    }
+
+    renderThemeMenus();
+  }
+
+  // OBSŁUGA AUDIO & PLAYLISTY
+  const playlist = [
+    { title: "Cloud9", artist: "Tobu & Itro", src: "cloud9.mp3" },
+    { title: "Candyland", artist: "Tobu", src: "candyland.mp3" },
+    { title: "Firefly", artist: "Tobu", src: "firefly.mp3" }
+  ];
+
+  let currentTrackIndex = 0;
+  const bgMusic = document.getElementById('bgMusic');
+  const trackHud = document.getElementById('trackHud');
+  const audioBtn = document.getElementById('audioBtn');
+  let audioCtx = null;
+  let sfxGainNode = null;
+  let musicStarted = false;
+
+  bgMusic.volume = musicVolume;
+  audioBtn.innerText = isMuted ? '🔇' : '🔊';
+
+  function startMusic() {
+    if (isMuted) return;
+    const track = playlist[currentTrackIndex];
+    bgMusic.src = track.src;
+    bgMusic.play().then(() => {
+      musicStarted = true;
+      trackHud.innerText = `🎵 ${track.artist} - ${track.title}`;
+    }).catch(() => {
+      trackHud.innerText = (translations[currentLang] || translations.pl).clickToPlay;
+    });
+  }
+
+  bgMusic.addEventListener('ended', () => {
+    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+    startMusic();
+  });
+
+  function handleFirstInteraction() {
+    initAudioContext();
+    if (!musicStarted && !isMuted) {
+      startMusic();
+    }
+  }
+
+  window.addEventListener('click', handleFirstInteraction);
+  window.addEventListener('touchstart', handleFirstInteraction);
+
+  function initAudioContext() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+      sfxGainNode = audioCtx.createGain();
+      sfxGainNode.gain.value = sfxVolume;
+      sfxGainNode.connect(audioCtx.destination);
+    }
+  }
+
+  function playBounceSFX() {
+    if (!audioCtx || isMuted || sfxVolume <= 0) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180 + Math.random() * 60, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(sfxGainNode);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    } catch(e){}
+  }
+
+  function playBuySFX() {
+    if (!audioCtx || isMuted || sfxVolume <= 0) return;
+    try {
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.setValueAtTime(659.25, now + 0.08);
+      osc.frequency.setValueAtTime(783.99, now + 0.16);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc.connect(gain);
+      gain.connect(sfxGainNode);
+      osc.start();
+      osc.stop(now + 0.35);
+    } catch(e){}
+  }
+
+  audioBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isMuted = !isMuted;
+    localStorage.setItem('supelbalss_muted', isMuted);
+    audioBtn.innerText = isMuted ? '🔇' : '🔊';
+    if (isMuted) {
+      bgMusic.pause();
+    } else {
+      if (!musicStarted) startMusic();
+      else bgMusic.play();
+    }
+  });
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const menuBtn = document.getElementById('menuBtn');
+  const closeBtn = document.getElementById('closeBtn');
+  const menuPanel = document.getElementById('menuPanel');
+  const themeListEl = document.getElementById('themeList');
+  const bgThemeListEl = document.getElementById('bgThemeList');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedValue = document.getElementById('speedValue');
+  const speedContainer = document.getElementById('speedContainer');
+  const freeBallSlider = document.getElementById('freeBallSlider');
+  const freeBallValue = document.getElementById('freeBallValue');
+  const freeBallContainer = document.getElementById('freeBallContainer');
+  let freeBallCount = 25;
+
+  const coinHud = document.getElementById('coinHud');
+  const coinCountEl = document.getElementById('coinCount');
+  const bpsHud = document.getElementById('bpsHud');
+  const bpsCountEl = document.getElementById('bpsCount');
+  const timeHudEl = document.getElementById('timeHud');
+  const idleSection = document.getElementById('idleSection');
+
+  const musicVolSlider = document.getElementById('musicVolSlider');
+  const sfxVolSlider = document.getElementById('sfxVolSlider');
+  const MAX_BALLS = 50; 
+
+  musicVolSlider.value = musicVolume;
+  document.getElementById('musicVolVal').innerText = Math.round(musicVolume * 100) + '%';
+  sfxVolSlider.value = sfxVolume;
+  document.getElementById('sfxVolVal').innerText = Math.round(sfxVolume * 100) + '%';
+
+  musicVolSlider.addEventListener('input', (e) => {
+    musicVolume = parseFloat(e.target.value);
+    localStorage.setItem('supelbalss_music_vol', musicVolume);
+    document.getElementById('musicVolVal').innerText = Math.round(musicVolume * 100) + '%';
+    bgMusic.volume = musicVolume;
+  });
+
+  sfxVolSlider.addEventListener('input', (e) => {
+    sfxVolume = parseFloat(e.target.value);
+    localStorage.setItem('supelbalss_sfx_vol', sfxVolume);
+    document.getElementById('sfxVolVal').innerText = Math.round(sfxVolume * 100) + '%';
+    if (sfxGainNode) sfxGainNode.gain.value = sfxVolume;
+  });
+
+  freeBallSlider.addEventListener('input', (e) => {
+    freeBallCount = parseInt(e.target.value);
+    freeBallValue.innerText = freeBallCount;
+    if (gameMode === 'free') {
+      while (balls.length < freeBallCount) balls.push(new Ball());
+      while (balls.length > freeBallCount) balls.pop();
+    }
+  });
+
+  let width, height, clocks = [], matrixDrops = [];
+  let bounceCountThisSecond = 0, currentBPS = 0;
+
+  setInterval(() => {
+    currentBPS = bounceCountThisSecond;
+    bounceCountThisSecond = 0;
+    bpsCountEl.innerText = `${currentBPS}/s`;
+  }, 1000);
+
+  let totalPlayedTime = parseVal('total_played_time', 0);
+
+  setInterval(() => {
+    totalPlayedTime++;
+    localStorage.setItem('total_played_time', totalPlayedTime);
+    updateTimeDisplay();
+    updateUI();
+  }, 1000);
+
+  function updateTimeDisplay() {
+    const hours = Math.floor(totalPlayedTime / 3600);
+    const mins = Math.floor((totalPlayedTime % 3600) / 60);
+    const secs = totalPlayedTime % 60;
+    timeHudEl.innerText = hours > 0 
+      ? `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      : `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  updateTimeDisplay();
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    initClocks();
+    initMatrix();
+  }
+
+  function initClocks() {
+    clocks = [];
+    for (let x = 45; x < width; x += 90) {
+      for (let y = 45; y < height; y += 90) {
+        clocks.push({ x: x, y: y, size: 28, angle: Math.random() * Math.PI * 2 });
+      }
+    }
+  }
+
+  function initMatrix() {
+    matrixDrops = Array.from({ length: Math.floor(width / 20) }, () => Math.random() * -100);
+  }
+
+  window.addEventListener('resize', resize);
+
+  let gameMode = 'free';
+  let coins = parseVal('idle_coins', 0);
+  let incomePerBounce = parseVal('idle_income', 1);
+  let incomeCost = parseVal('idle_income_cost', 10);
+  let idleBallCount = parseVal('idle_ball_count', 1);
+  let ballCost = parseVal('idle_ball_cost', 25);
+
+  let isCoinBallUnlocked = localStorage.getItem('unlocked_coin_ball') === 'true';
+  let isMoneyBgUnlocked = localStorage.getItem('unlocked_money_bg') === 'true';
+  let isMatrixBgUnlocked = localStorage.getItem('unlocked_matrix_bg') === 'true';
+  let isMatrixBallUnlocked = localStorage.getItem('unlocked_matrix_ball') === 'true';
+
+  function saveIdleState() {
+    localStorage.setItem('idle_coins', coins);
+    localStorage.setItem('idle_income', incomePerBounce);
+    localStorage.setItem('idle_income_cost', incomeCost);
+    localStorage.setItem('idle_ball_count', idleBallCount);
+    localStorage.setItem('idle_ball_cost', ballCost);
+    localStorage.setItem('unlocked_coin_ball', isCoinBallUnlocked);
+    localStorage.setItem('unlocked_money_bg', isMoneyBgUnlocked);
+    localStorage.setItem('unlocked_matrix_bg', isMatrixBgUnlocked);
+    localStorage.setItem('unlocked_matrix_ball', isMatrixBallUnlocked);
+  }
+
+  function updateUI() {
+    coinCountEl.innerText = coins;
+    document.getElementById('incomeVal').innerText = incomePerBounce;
+    document.getElementById('incomeCost').innerText = incomeCost;
+    document.getElementById('buyIncomeBtn').disabled = coins < incomeCost;
+
+    document.getElementById('ballCountVal').innerText = idleBallCount;
+    const buyBallBtn = document.getElementById('buyBallBtn');
+    if (idleBallCount >= MAX_BALLS) {
+      buyBallBtn.innerHTML = 'MAX';
+      buyBallBtn.disabled = true;
+    } else {
+      document.getElementById('ballCost').innerText = ballCost;
+      buyBallBtn.disabled = coins < ballCost;
+    }
+
+    renderThemeMenus();
+  }
+
+  function addCoins(amount) {
+    if (gameMode !== 'idle') return;
+    coins += amount;
+    saveIdleState();
+    updateUI();
+  }
+
+  function buyIncomeUpgrade() {
+    if (coins >= incomeCost) {
+      coins -= incomeCost;
+      incomePerBounce += 1;
+      incomeCost *= 2;
+      playBuySFX();
+      saveIdleState();
+      updateUI();
+    }
+  }
+
+  function buyBallUpgrade() {
+    if (idleBallCount >= MAX_BALLS) return;
+    if (coins >= ballCost) {
+      coins -= ballCost;
+      idleBallCount += 1;
+      ballCost *= 2;
+      balls.push(new Ball());
+      playBuySFX();
+      saveIdleState();
+      updateUI();
+    }
+  }
+
+  function switchGameMode(mode) {
+    gameMode = mode;
+    document.getElementById('modeFreeBtn').classList.toggle('active', mode === 'free');
+    document.getElementById('modeIdleBtn').classList.toggle('active', mode === 'idle');
+
+    if (mode === 'idle') {
+      coinHud.style.display = 'flex';
+      bpsHud.style.display = 'flex';
+      idleSection.style.display = 'block';
+      speedContainer.classList.add('disabled');
+      freeBallContainer.classList.add('disabled');
+      setSpeed(1.0);
+      balls.length = 0;
+      for (let i = 0; i < idleBallCount; i++) balls.push(new Ball());
+    } else {
+      coinHud.style.display = 'none';
+      bpsHud.style.display = 'flex';
+      idleSection.style.display = 'none';
+      speedContainer.classList.remove('disabled');
+      freeBallContainer.classList.remove('disabled');
+      balls.length = 0;
+      for (let i = 0; i < freeBallCount; i++) balls.push(new Ball());
+    }
+    updateUI();
+  }
+
+  let globalSpeedMultiplier = 1.0;
+  function setSpeed(val) {
+    globalSpeedMultiplier = parseFloat(val);
+    speedSlider.value = globalSpeedMultiplier;
+    speedValue.innerText = globalSpeedMultiplier.toFixed(1) + 'x';
+  }
+  speedSlider.addEventListener('input', (e) => setSpeed(e.target.value));
+
+  let chameleonHue = 0;
+
+  const ballThemes = [
+    { key: "themeNeon", dot: "#00e5ff", getColor: () => Math.random() > 0.5 ? '#ff4081' : '#00e5ff' },
+    { key: "themeChameleon", dot: "linear-gradient(45deg, red, yellow, green, cyan, blue, magenta)", isChameleon: true, getColor: () => `hsl(${chameleonHue}, 100%, 60%)` },
+    { key: "themeRedBlue", dot: "#ff3366", getColor: () => Math.random() > 0.5 ? '#ff3366' : '#3388ff' },
+    { key: "themeClock", dot: "#bb86fc", timeReq: 300, isClock: true, getColor: () => '#bb86fc' },
+    { key: "themeGold", dot: "#ffd700", getColor: () => '#ffd700' },
+    { key: "themeCoin", dot: "#ffd700", locked: true, buyType: 'coin_ball', price: 500, isCoin: true, getColor: () => '#ffd700' },
+    { key: "themeMatrix", dot: "#00ff66", locked: true, buyType: 'matrix_ball', price: 101010, isMatrix: true, getColor: () => '#00ff66' },
+    { key: "themeBlackHole", dot: "#8800ff", timeReq: 1800, isBlackHole: true, getColor: () => '#000000' }
+  ];
+
+  const bgThemes = [
+    { key: "bgSpace", color: "#050508" },
+    { key: "bgSpaceTime", color: "space_time", timeReq: 900 },
+    { key: "bgMoney", color: "money_pattern", locked: true, buyType: 'money_bg', price: 150 },
+    { key: "bgMatrix", color: "matrix_code", locked: true, buyType: 'matrix_bg', price: 10101 }
+  ];
+
+  function renderThemeMenus() {
+    const t = translations[currentLang] || translations.pl;
+
+    themeListEl.innerHTML = '';
+    ballThemes.forEach((theme, idx) => {
+      let isLocked = false, lockText = '';
+
+      if (theme.timeReq) {
+        if (totalPlayedTime < theme.timeReq) {
+          isLocked = true;
+          lockText = `<span class="time-lock-text">${t.playMore} ${Math.ceil((theme.timeReq - totalPlayedTime) / 60)} ${t.mins}</span>`;
+        }
+      } else if (theme.locked) {
+        if ((theme.buyType === 'coin_ball' && !isCoinBallUnlocked) || (theme.buyType === 'matrix_ball' && !isMatrixBallUnlocked)) {
+          isLocked = true;
+          lockText = `<button class="buy-btn" onclick="buyTheme(event, '${theme.buyType}')">${t.btnBuy} ${theme.price} 🪙</button>`;
+        }
+      }
+
+      const btn = document.createElement('button');
+      btn.className = `theme-btn ${idx === currentThemeIndex ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
+      btn.innerHTML = `<div><span class="color-dot" style="${theme.dot.includes('gradient') ? 'background:'+theme.dot : 'background:'+theme.dot}"></span> ${t[theme.key]}</div> ${lockText}`;
+      
+      btn.onclick = () => {
+        if (!isLocked) {
+          currentThemeIndex = idx;
+          localStorage.setItem('supelbalss_ball_theme', idx);
+          balls.forEach(b => {
+            if (ballThemes[idx]) b.color = ballThemes[idx].getColor();
+          });
+          renderThemeMenus();
+        }
+      };
+      themeListEl.appendChild(btn);
+    });
+
+    bgThemeListEl.innerHTML = '';
+    bgThemes.forEach((theme, idx) => {
+      let isLocked = false, lockText = '';
+
+      if (theme.timeReq) {
+        if (totalPlayedTime < theme.timeReq) {
+          isLocked = true;
+          lockText = `<span class="time-lock-text">${t.playMore} ${Math.ceil((theme.timeReq - totalPlayedTime) / 60)} ${t.mins}</span>`;
+        }
+      } else if (theme.locked) {
+        if ((theme.buyType === 'money_bg' && !isMoneyBgUnlocked) || (theme.buyType === 'matrix_bg' && !isMatrixBgUnlocked)) {
+          isLocked = true;
+          lockText = `<button class="buy-btn" onclick="buyTheme(event, '${theme.buyType}')">${t.btnBuy} ${theme.price} 🪙</button>`;
+        }
+      }
+
+      const btn = document.createElement('button');
+      btn.className = `theme-btn ${idx === currentBgIndex ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
+      btn.innerHTML = `<div>${t[theme.key]}</div> ${lockText}`;
+      
+      btn.onclick = () => {
+        if (!isLocked) {
+          currentBgIndex = idx;
+          localStorage.setItem('supelbalss_bg_theme', idx);
+          renderThemeMenus();
+        }
+      };
+      bgThemeListEl.appendChild(btn);
+    });
+  }
+
+  function buyTheme(e, type) {
+    e.stopPropagation();
+    if (type === 'coin_ball' && coins >= 500) { coins -= 500; isCoinBallUnlocked = true; currentThemeIndex = 5; }
+    else if (type === 'money_bg' && coins >= 150) { coins -= 150; isMoneyBgUnlocked = true; currentBgIndex = 2; }
+    else if (type === 'matrix_bg' && coins >= 10101) { coins -= 10101; isMatrixBgUnlocked = true; currentBgIndex = 3; }
+    else if (type === 'matrix_ball' && coins >= 101010) { coins -= 101010; isMatrixBallUnlocked = true; currentThemeIndex = 6; }
+    else return;
+
+    localStorage.setItem('supelbalss_ball_theme', currentThemeIndex);
+    localStorage.setItem('supelbalss_bg_theme', currentBgIndex);
+    playBuySFX();
+    saveIdleState();
+    updateUI();
+  }
+
+  menuBtn.addEventListener('click', (e) => { 
+    e.stopPropagation(); 
+    menuPanel.classList.toggle('open'); 
+  });
+  closeBtn.addEventListener('click', () => menuPanel.classList.remove('open'));
+
+  const magnet = { x: 0, y: 0, active: false };
+  function setMagnet(x, y, active) {
+    if (menuPanel.classList.contains('open')) return;
+    magnet.x = x; magnet.y = y; magnet.active = active;
+  }
+
+  window.addEventListener('pointerdown', (e) => { if (e.target === canvas) setMagnet(e.clientX, e.clientY, true); });
+  window.addEventListener('pointermove', (e) => { if (magnet.active) setMagnet(e.clientX, e.clientY, true); });
+  window.addEventListener('pointerup', () => setMagnet(0, 0, false));
+
+  class Ball {
+    constructor() {
+      this.radius = Math.random() * 3 + 11;
+      this.x = Math.random() * (width - this.radius * 4) + this.radius * 2;
+      this.y = Math.random() * (height - this.radius * 4) + this.radius * 2;
+      const angle = Math.random() * Math.PI * 2;
+      this.baseSpeed = Math.random() * 2 + 3.5; 
+      this.vx = Math.cos(angle) * this.baseSpeed;
+      this.vy = Math.sin(angle) * this.baseSpeed;
+      
+      const theme = ballThemes[currentThemeIndex] || ballThemes[0];
+      this.color = theme.getColor();
+      this.clockAngle = 0;
+      this.hueOffset = Math.random() * 360;
+      this.matrixChar = '1';
+      this.matrixTimer = 0;
+    }
+
+    update() {
+      if (magnet.active) {
+        const dx = magnet.x - this.x;
+        const dy = magnet.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 5) {
+          this.vx += (dx / dist) * 0.45;
+          this.vy += (dy / dist) * 0.45;
+        }
+      } else {
+        const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (currentSpeed > this.baseSpeed) {
+          const ratio = Math.max(this.baseSpeed, currentSpeed * 0.985) / currentSpeed;
+          this.vx *= ratio; this.vy *= ratio;
+        }
+      }
+
+      this.x += this.vx * globalSpeedMultiplier;
+      this.y += this.vy * globalSpeedMultiplier;
+      this.clockAngle += 0.05 * globalSpeedMultiplier;
+
+      this.matrixTimer++;
+      if (this.matrixTimer % 15 === 0) this.matrixChar = Math.random() > 0.5 ? '1' : '0';
+
+      let bounced = false;
+      if (this.x - this.radius < 0) { this.x = this.radius; this.vx = Math.abs(this.vx); bounced = true; }
+      else if (this.x + this.radius > width) { this.x = width - this.radius; this.vx = -Math.abs(this.vx); bounced = true; }
+
+      if (this.y - this.radius < 0) { this.y = this.radius; this.vy = Math.abs(this.vy); bounced = true; }
+      else if (this.y + this.radius > height) { this.y = height - this.radius; this.vy = -Math.abs(this.vy); bounced = true; }
+
+      if (bounced) {
+        addCoins(incomePerBounce);
+        bounceCountThisSecond++;
+        playBounceSFX();
+      }
+    }
+
+    draw() {
+      const activeTheme = ballThemes[currentThemeIndex] || ballThemes[0];
+      if (activeTheme.isChameleon) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${(chameleonHue + this.hueOffset) % 360}, 100%, 60%)`;
+        ctx.fill();
+        ctx.closePath();
+      } else if (activeTheme.isMatrix) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#050a05'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#00ff66';
+        ctx.shadowColor = '#00ff66'; ctx.shadowBlur = 8;
+        ctx.stroke(); ctx.closePath(); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#00ff66'; ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(this.matrixChar, this.x, this.y);
+      } else if (activeTheme.isBlackHole) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(138, 43, 226, 0.25)'; ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#000000'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#8a2be2';
+        ctx.shadowColor = '#d8b4fe'; ctx.shadowBlur = 10;
+        ctx.stroke(); ctx.closePath(); ctx.shadowBlur = 0;
+      } else if (activeTheme.isCoin) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd700'; ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = '#b8860b'; ctx.stroke(); ctx.closePath();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('$', this.x, this.y);
+      } else if (activeTheme.isClock) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#110022'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#bb86fc'; ctx.stroke(); ctx.closePath();
+        ctx.beginPath(); ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + Math.cos(this.clockAngle) * (this.radius - 3), this.y + Math.sin(this.clockAngle) * (this.radius - 3));
+        ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 1.5; ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color || '#00e5ff'; ctx.fill(); ctx.closePath();
+      }
+    }
+  }
+
+  // INICJALIZACJA KULEK I ZMIENNYCH
+  resize();
+  let balls = [];
+  for (let i = 0; i < freeBallCount; i++) {
+    balls.push(new Ball());
+  }
+
+  setLanguage(currentLang);
+  updateUI();
+
+  function drawClocks() {
+    clocks.forEach(c => {
+      let rotSpeed = 0.008 * globalSpeedMultiplier;
+      if (magnet.active) {
+        const dist = Math.hypot(magnet.x - c.x, magnet.y - c.y);
+        if (dist < 220) rotSpeed += (220 - dist) * 0.0008;
+      }
+      c.angle += rotSpeed;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(187, 134, 252, 0.12)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(c.x, c.y);
+      ctx.lineTo(c.x + Math.cos(c.angle) * (c.size / 2.4), c.y + Math.sin(c.angle) * (c.size / 2.4));
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)'; ctx.stroke();
+    });
+  }
+
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(0, 255, 70, 0.15)'; ctx.font = '14px monospace';
+    matrixDrops.forEach((y, i) => {
+      ctx.fillText(Math.random() > 0.5 ? '1' : '0', i * 20, y);
+      if (y > height && Math.random() > 0.975) matrixDrops[i] = 0;
+      matrixDrops[i] += 15 * globalSpeedMultiplier;
+    });
+  }
+
+  function animate() {
+    chameleonHue = (chameleonHue + 1) % 360;
+    const activeBg = bgThemes[currentBgIndex] || bgThemes[0];
+
+    if (activeBg.color === "space_time") {
+      ctx.fillStyle = 'rgba(5, 3, 15, 0.25)'; ctx.fillRect(0, 0, width, height); drawClocks();
+    } else if (activeBg.color === "money_pattern") {
+      ctx.fillStyle = 'rgba(3, 15, 8, 0.3)'; ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(0, 255, 100, 0.04)'; ctx.font = '26px sans-serif';
+      for(let x=20; x<width; x+=80) {
+        for(let y=30; y<height; y+=80) ctx.fillText('💲', x, y);
+      }
+    } else if (activeBg.color === "matrix_code") {
+      ctx.fillStyle = 'rgba(0, 10, 2, 0.2)'; ctx.fillRect(0, 0, width, height); drawMatrix();
+    } else {
+      ctx.fillStyle = 'rgba(5, 5, 8, 0.3)'; ctx.fillRect(0, 0, width, height);
+    }
+
+    if (magnet.active) {
+      ctx.beginPath();
+      ctx.arc(magnet.x, magnet.y, 24, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; ctx.lineWidth = 2; ctx.stroke(); ctx.closePath();
+    }
+
+    balls.forEach(ball => { ball.update(); ball.draw(); });
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+</script>
+
+</body>
+</html>
